@@ -2,7 +2,7 @@ import csv
 import os
 from .gemini_client import GeminiClient
 
-YOUR_GEMINI_API_KEY = "AIzaSyDqM-1Q-9W1OjR_RjQzqljca1c_HpBsWMw"
+YOUR_GEMINI_API_KEY = "AIzaSyDh4R7ElNZE7XkDuDkVJXbhwzzrruujzSM"
 gemini = GeminiClient(api_key=YOUR_GEMINI_API_KEY)
 
 def load_knowledge(filename="data/drugs.csv"):
@@ -19,23 +19,28 @@ def load_knowledge(filename="data/drugs.csv"):
 knowledge = load_knowledge()
 
 def get_answer(user_query: str):
-    # ищем релевантные препараты
     relevant_drugs = []
     for name, info in knowledge.items():
         if name.lower() in user_query.lower():
             relevant_drugs.append(info)
 
     if not relevant_drugs:
-        relevant_drugs = list(knowledge.values())  # fallback: все препараты
+        relevant_drugs = list(knowledge.values())
 
     context_texts = []
-    for info in relevant_drugs:
+    sources_list = []
+    for info in relevant_drugs[:3]:
+        wiki_url = f"https://ru.wikipedia.org/wiki/"
+        source_text = f"Википедия: {wiki_url}"
+
         context_texts.append(
             f"Название: {info['Название']}\n"
             f"Группа: {info['Группа']}\n"
             f"Инструкция: {info['Инструкция']}\n"
-            f"Источник: {info['Источник']}\n"
+            f"Источник: {source_text}\n"
         )
+        sources_list.append(source_text)
+
     context = "\n---\n".join(context_texts)
 
     prompt = f"""
@@ -52,8 +57,6 @@ def get_answer(user_query: str):
 
     try:
         response = gemini.generate(prompt)
-
-        # Объединяем текст из parts или candidates
         if isinstance(response, dict):
             if "parts" in response:
                 text = "".join([p.get("text", "") for p in response.get("parts", [])])
@@ -64,11 +67,14 @@ def get_answer(user_query: str):
         else:
             text = str(response)
 
-        return {"answer": text, "sources": [", ".join([d["Источник"] for d in relevant_drugs])]}
+        return {"answer": text, "sources": sources_list}
 
     except Exception:
-        # fallback: часть инструкции первых 2-3 препаратов
         fallback_texts = []
+        fallback_sources = []
         for info in relevant_drugs[:3]:
             fallback_texts.append(f"{info['Название']}: {info['Инструкция'][:200]}...")
-        return {"answer": "\n".join(fallback_texts), "sources": [", ".join([d["Источник"] for d in relevant_drugs[:3]])]}
+            wiki_url = f"https://ru.wikipedia.org/wiki/{info['Название']}"
+            fallback_sources.append(f"Википедия: {wiki_url}")
+        return {"answer": "\n".join(fallback_texts), "sources": fallback_sources}
+
