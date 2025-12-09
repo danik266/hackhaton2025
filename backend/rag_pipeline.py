@@ -2,7 +2,7 @@ import csv
 import os
 from .gemini_client import GeminiClient
 
-YOUR_GEMINI_API_KEY = "AIzaSyDNg5afiEJaJSDkR-W_GVbNo22F3n-BeeM"
+YOUR_GEMINI_API_KEY = "AIzaSyAmB87gO07Ru5o3LhA30SYkV08q4yduyjw"
 gemini = GeminiClient(api_key=YOUR_GEMINI_API_KEY)
 
 def load_knowledge(filename="data/drugs.csv"):
